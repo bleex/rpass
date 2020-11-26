@@ -1,8 +1,3 @@
-extern crate argparse;
-extern crate keepass;
-extern crate serde_yaml;
-extern crate ssh;
-
 use argparse::{ArgumentParser, StoreTrue, Store};
 use keepass::{Database, Node, Result};
 use std::fs;
