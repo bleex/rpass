@@ -11,4 +11,5 @@ keepass = '*'
 argparse = '*'
 serde = { version = '*', features = ['derive'] }
 serde_yaml = '*'
-ssh = '*'
+blxlibssh = { version = '*', git = 'file:///srv/vm/home/dev/rust/blxlibssh' }
+libc = '*'
