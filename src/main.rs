@@ -6,8 +6,7 @@ use std::process::exit;
 use libc::{c_void};
 use serde::{Serialize, Deserialize};
 use blxlibssh::*;
-use std::ffi::CStr;
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all="camelCase")]
@@ -78,10 +77,8 @@ fn main() -> Result<()> {
 
     if rc != SSH_OK {
         println!("SSH Error {:?}", rc);
-        let session_ptr: *mut c_void = &mut session as *mut _ as *mut c_void; 
-        let msg_ptr =  unsafe { ssh_get_error(session_ptr) };
-        let c_str = unsafe { CStr::from_ptr(msg_ptr) };
-        println!("{:?}", c_str.to_str());
+        let c_str = unsafe { CStr::from_ptr(ssh_get_error(session as *mut c_void)).to_string_lossy().into_owned() };
+        println!("{:?}", c_str);
         exit(-1);
     }
     unsafe { ssh_disconnect(session) };
