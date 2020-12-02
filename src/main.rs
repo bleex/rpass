@@ -3,7 +3,7 @@ use keepass::{Database, Node, Result};
 use std::fs;
 use std::io::Read;
 use std::process::exit;
-use libc::{c_void};
+use libc::{c_void,c_char};
 use serde::{Serialize, Deserialize};
 use blxlibssh::*;
 use std::ffi::{CStr, CString};
@@ -63,7 +63,7 @@ fn main() -> Result<()> {
 //        }
 //    }
     let mut session: ssh_session;
-    let rc: i32;
+    let mut rc: i32;
 
     session = unsafe { ssh_new() };
     if std::ptr::null() == session {
@@ -72,8 +72,19 @@ fn main() -> Result<()> {
     }
 
     let mut host = CString::new("localhost").unwrap();
+    let mut user = CString::new("a").unwrap();
     unsafe { ssh_options_set(session, SSH_OPTIONS_HOST, host.as_ptr() as *const c_void) };
+    unsafe { ssh_options_set(session, SSH_OPTIONS_USER, user.as_ptr() as *const c_void) };
     rc = unsafe { ssh_connect(session) };
+
+    if rc != SSH_OK {
+        println!("SSH Error {:?}", rc);
+        let c_str = unsafe { CStr::from_ptr(ssh_get_error(session as *mut c_void)).to_string_lossy().into_owned() };
+        println!("{:?}", c_str);
+        exit(-1);
+    }
+    let mut pass = CString::new("q").unwrap();
+    rc = unsafe { ssh_userauth_password(session, std::ptr::null(), pass.as_ptr() as *const c_char) };
 
     if rc != SSH_OK {
         println!("SSH Error {:?}", rc);
