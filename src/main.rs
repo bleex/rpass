@@ -3,7 +3,7 @@ use keepass::{Database, Node, Result};
 use std::fs;
 use std::io::Read;
 use std::process::exit;
-use libc::{c_void,c_char};
+use libc::{c_void,c_char,size_t};
 use serde::{Serialize, Deserialize};
 use blxlibssh::*;
 use std::ffi::{CStr, CString};
@@ -78,7 +78,7 @@ fn main() -> Result<()> {
     rc = unsafe { ssh_connect(session) };
 
     if rc != SSH_OK {
-        println!("SSH Error {:?}", rc);
+        println!("1. SSH Error {:?}", rc);
         let c_str = unsafe { CStr::from_ptr(ssh_get_error(session as *mut c_void)).to_string_lossy().into_owned() };
         println!("{:?}", c_str);
         exit(-1);
@@ -87,10 +87,58 @@ fn main() -> Result<()> {
     rc = unsafe { ssh_userauth_password(session, std::ptr::null(), pass.as_ptr() as *const c_char) };
 
     if rc != SSH_OK {
-        println!("SSH Error {:?}", rc);
+        println!("2. SSH Error {:?}", rc);
         let c_str = unsafe { CStr::from_ptr(ssh_get_error(session as *mut c_void)).to_string_lossy().into_owned() };
         println!("{:?}", c_str);
         exit(-1);
+    }
+
+    let mut channel = unsafe { ssh_channel_new(session) };
+    if std::ptr::null() == channel {
+        println!("No channel");
+        exit(-1);
+    }
+    rc = unsafe { ssh_channel_open_session(channel) };
+    if rc != SSH_OK {
+        println!("3. SSH Error {:?}", rc);
+        let c_str = unsafe { CStr::from_ptr(ssh_get_error(session as *mut c_void)).to_string_lossy().into_owned() };
+        println!("{:?}", c_str);
+        exit(-1);
+    }
+    rc = unsafe { ssh_channel_request_pty(channel) };
+    if rc != SSH_OK {
+        println!("4. SSH Error {:?}", rc);
+        let c_str = unsafe { CStr::from_ptr(ssh_get_error(session as *mut c_void)).to_string_lossy().into_owned() };
+        println!("{:?}", c_str);
+        exit(-1);
+    }
+    rc = unsafe { ssh_channel_change_pty_size(channel, 80, 25) };
+    if rc != SSH_OK {
+        println!("5. SSH Error {:?}", rc);
+        let c_str = unsafe { CStr::from_ptr(ssh_get_error(session as *mut c_void)).to_string_lossy().into_owned() };
+        println!("{:?}", c_str);
+        exit(-1);
+    }
+    rc = unsafe { ssh_channel_request_shell(channel) };
+    if rc != SSH_OK {
+        println!("6. SSH Error {:?}", rc);
+        let c_str = unsafe { CStr::from_ptr(ssh_get_error(session as *mut c_void)).to_string_lossy().into_owned() };
+        println!("{:?}", c_str);
+        exit(-1);
+    }
+
+    while 0 == unsafe { ssh_channel_is_open(channel) } &&
+        0 != unsafe { ssh_channel_is_eof(channel) } {
+        let mut buf: [u8; 1024] = [0; 1024];
+        rc = unsafe { ssh_channel_read(channel, buf.as_mut_ptr() as *mut c_void, buf.len() as u32, 1) };
+
+        if rc != SSH_OK {
+            println!("7. SSH Error {:?}", rc);
+            let c_str = unsafe { CStr::from_ptr(ssh_get_error(session as *mut c_void)).to_string_lossy().into_owned() };
+            println!("{:?}", c_str);
+            exit(-1);
+        }
+
     }
     unsafe { ssh_disconnect(session) };
     unsafe { ssh_free(session) };
