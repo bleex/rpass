@@ -130,7 +130,7 @@ fn main() -> Result<()> {
     while 0 == unsafe { ssh_channel_is_open(channel) } &&
         0 != unsafe { ssh_channel_is_eof(channel) } {
         let mut buf: [u8; 1024] = [0; 1024];
-        rc = unsafe { ssh_channel_read(channel, buf.as_mut_ptr() as *mut c_void, buf.len() as u32, 1) };
+        rc = unsafe { ssh_channel_read(channel, buf.as_mut_ptr() as *mut c_void, buf.len() as u32, 0) };
 
         if rc != SSH_OK {
             println!("7. SSH Error {:?}", rc);
@@ -138,7 +138,29 @@ fn main() -> Result<()> {
             println!("{:?}", c_str);
             exit(-1);
         }
+        println!("{:?}", buf);
+    }
 
+    let mut cmd = CString::new("id").unwrap();
+    rc = unsafe { ssh_channel_request_exec(channel, cmd.as_ptr() as *const c_char) };
+    if rc != SSH_OK {
+        println!("9. SSH Error {:?}", rc);
+        let c_str = unsafe { CStr::from_ptr(ssh_get_error(session as *mut c_void)).to_string_lossy().into_owned() };
+        println!("{:?}", c_str);
+        exit(-1);
+    }
+    while 0 == unsafe { ssh_channel_is_open(channel) } &&
+        0 != unsafe { ssh_channel_is_eof(channel) } {
+        let mut buf: [u8; 1024] = [0; 1024];
+        rc = unsafe { ssh_channel_read(channel, buf.as_mut_ptr() as *mut c_void, buf.len() as u32, 0) };
+
+        if rc != SSH_OK {
+            println!("8. SSH Error {:?}", rc);
+            let c_str = unsafe { CStr::from_ptr(ssh_get_error(session as *mut c_void)).to_string_lossy().into_owned() };
+            println!("{:?}", c_str);
+            exit(-1);
+        }
+        println!("{:?}", buf);
     }
     unsafe { ssh_disconnect(session) };
     unsafe { ssh_free(session) };
